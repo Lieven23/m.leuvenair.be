@@ -45,8 +45,8 @@
         </div>
       </div>
     </div>
-    <!-- <p>Time LeuvenAir: {{ sensor_lufdaten_timestamp }}</p>
-    <p>UTC time Irceline: {{ sensor_irceline_timestamp }}</p> -->
+    <p v-if="sensor_lufdaten_timestamp_minutes">The Leuvenair value was measured {{ sensor_lufdaten_timestamp_minutes }} minutes ago </p>
+    <!--<p>UTC time Irceline: {{ sensor_irceline_timestamp }}</p> -->
     <cookie-law theme="blood-orange--rounded"></cookie-law>
   </div>
 </template>
@@ -84,7 +84,8 @@
         sensor_PM25: NaN,
         sensor_PM10: NaN,
         sensor_color: null,
-        sensor_lufdaten_timestamp: null,
+        sensor_lufdaten_timestamp_hours: null,
+        sensor_lufdaten_timestamp_minutes: null,
         sensor_temp_full: null,
         sensor_irceline_PM25: NaN,
         sensor_irceline_timestamp: null,
@@ -196,50 +197,6 @@
         {'value':{dust_sensor_id: 15130 ,temp_sensor_id: 15131.0 },'text':' 15130 - Ellestraat - 3020 Herent '},
         {'value':{dust_sensor_id: 15986 ,temp_sensor_id: 15987.0 },'text':' 15986 - Kiezelstraat - 3078 Meerbeek '},
         {'value':{dust_sensor_id: 16358 ,temp_sensor_id: 16359.0 },'text':' 16358 - Grensstraat - 3010 Kessel-Lo '}
-        ],
-        sensors_backup: [
-        {
-          'value': { 
-            dust_sensor_id: 6561,
-            temp_sensor_id: null
-          }, 
-          'text': '6561 - Lentedreef - 3010 Kessel-Lo'
-        },
-        {
-          'value': { 
-            dust_sensor_id: 12030,
-            temp_sensor_id: 12031
-          }, 
-          'text': '12030 - Pleinstraat - 3001 Heverlee'
-        },
-        {
-          'value': {
-            dust_sensor_id: 8745,
-            temp_sensor_id: 8746
-          }, 
-          'text': '8745 - Schapenstraat - 3000 Leuven'
-        },
-        {
-          'value': {
-            dust_sensor_id: 8765,
-            temp_sensor_id: 8766
-          }, 
-          'text': '8765 - Ernest Solvaystraat 1/3 - 3010 Kessel-Lo'
-        },
-        {
-          'value': {
-            dust_sensor_id: 8769,
-            temp_sensor_id: 8770
-          }, 
-          'text': '8769 - Tervuursevest - 3001 Heverlee'
-        },
-        {
-          'value': {
-            dust_sensor_id: 8773,
-            temp_sensor_id: 8774
-          }, 
-          'text': '8773 - Alfred Delaunoislaan - 3001 Heverlee'
-        }
         ]
       }
     },
@@ -251,47 +208,81 @@
     methods: {
 
       fetchData: function() {
-        console.log('Setting the cookie');
-
+        //console.log('Setting the cookie');
         if (this.sensor_id !== null)
-          {this.$cookies.set('sensor_id', this.sensor_id)};
-        console.log('Fetching data...');
+          {this.$cookies.set('sensor_id', this.sensor_id)}
+        //console.log('Fetching data...');
         axios
         .get('https://api.luftdaten.info/v1/sensor/' + this.sensor_id.dust_sensor_id + '/')
         .then(response => {
-          this.sensor_PM25 = Number(response.data[0].sensordatavalues.find(checkPM25).value)
-          this.sensor_PM10 = Number(response.data[0].sensordatavalues.find(checkPM10).value)
-          var utcDate = new Date(response.data[0].timestamp + 'Z')
-          this.sensor_lufdaten_timestamp = utcDate.toLocaleString()
+          if (response.data.length > 0) {
+            //console.log(response)
+            this.sensor_PM25 = Number(response.data[0].sensordatavalues.find(checkPM25).value)
+            this.sensor_PM10 = Number(response.data[0].sensordatavalues.find(checkPM10).value)
+
+            var utcDate = new Date(response.data[0].timestamp + 'Z')
+            var now = new Date()
+            var difference = now - utcDate
+            this.sensor_lufdaten_timestamp_minutes = Math.ceil(difference / 1000 / 60) //convert value in milliseconds to minutes
+          }
+          else {
+            //console.log('no value received')
+            this.sensor_PM10 = NaN
+            this.sensor_PM25 = NaN
+            this.sensor_lufdaten_timestamp_minutes = null
+          }
         })
         .catch((error) => {
           this.sensor_PM10 = NaN
           this.sensor_PM25 = NaN
-          this.sensor_lufdaten_timestamp = null
+          this.sensor_lufdaten_timestamp_minutes = null
+          //console.log(error)
         });
         axios
         .get('https://geo.irceline.be/sos/api/v1/timeseries/100014') //irceline pm25 sensor
         .then(response => {
-          this.sensor_irceline_PM25 = Number(response.data.lastValue.value)
-          this.sensor_irceline_timestamp = response.data.lastValue.timestamp
+          if (response.data !== undefined) {
+            this.sensor_irceline_PM25 = Number(response.data.lastValue.value)
+            this.sensor_irceline_timestamp = response.data.lastValue.timestamp
+          }
+          else {
+            this.sensor_irceline_PM25 = NaN
+            this.sensor_irceline_timestamp = null
+          }
         });
         axios
         .get('https://geo.irceline.be/sos/api/v1/timeseries/6716') //irceline pm10 sensor
         .then(response => {
-          this.sensor_irceline_PM10 = Number(response.data.lastValue.value)
+          if (response.data !== undefined) {
+            this.sensor_irceline_PM10 = Number(response.data.lastValue.value)
+          }
+          else {
+            this.sensor_irceline_PM10 = NaN
+          }
         });
         axios
         .get('https://api.luftdaten.info/v1/sensor/' + this.sensor_id.temp_sensor_id + '/')
         .then(response => {
-          this.sensor_humidity = response.data[0].sensordatavalues.find(checkHumidity).value
-        })
+          if (response.data.length > 0) {
+            this.sensor_humidity = response.data[0].sensordatavalues.find(checkHumidity).value
+          }
+          else {
+            this.sensor_humidity = "..."
+          }
+          })
         .catch((error) => {
           this.sensor_humidity = "..."
-        });
+        }
+        );
         axios
         .get('https://api.luftdaten.info/v1/sensor/' + this.sensor_id.temp_sensor_id + '/')
         .then(response => {
-          this.sensor_temp_full = response.data[0].sensordatavalues.find(checkTemperature).value
+          if (response.data.length > 0) {
+            this.sensor_temp_full = response.data[0].sensordatavalues.find(checkTemperature).value
+          }
+          else {
+            this.sensor_temp_full = "..." 
+          }
         })
         .catch((error) => {
           this.sensor_temp_full = "..."
