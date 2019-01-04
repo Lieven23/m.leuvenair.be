@@ -45,7 +45,7 @@
         </div>
       </div>
     </div>
-    <p v-if="sensor_lufdaten_timestamp_minutes">The Leuvenair value was measured {{ sensor_lufdaten_timestamp_minutes }} minutes ago </p>
+    <p v-if="sensor_lufdaten_timestamp_minutes > 0">The Leuvenair value was measured {{ sensor_lufdaten_timestamp_minutes }} minutes ago </p>
     <!--<p>UTC time Irceline: {{ sensor_irceline_timestamp }}</p> -->
     <cookie-law theme="blood-orange--rounded"></cookie-law>
   </div>
