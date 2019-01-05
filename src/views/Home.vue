@@ -1,8 +1,5 @@
 <template>
   <div class="home">
-    <head>
-      <link rel="shortcut icon" type="image/png" href="/assets/lvnr_ico.png"/>
-    </head>
     <br>
     <select v-model="sensor_id" :options="sensors">
       <option v-for="sensor in sensors" :value="sensor.value">{{ sensor.text }}</option>
@@ -22,6 +19,14 @@
     <div class="ui two statistics">       
       <pm25component v-bind:pm25="sensor_irceline_PM25"></pm25component>
       <pm10component v-bind:pm10="sensor_irceline_PM10"></pm10component>
+    </div>
+    <h4 class="ui horizontal divider header">
+      <i class="bar chart icon"></i>
+      Irceline Leuven (Interpolated)
+    </h4>
+    <div class="ui two statistics">       
+      <pm25component v-bind:pm25="sensor_irceline_PM25_interpolated"></pm25component>
+      <pm10component v-bind:pm10="sensor_irceline_PM10_interpolated"></pm10component>
     </div>
     <div class="ui statistics">
       <h4 class="ui horizontal divider header">
@@ -45,8 +50,8 @@
         </div>
       </div>
     </div>
-    <p v-if="sensor_lufdaten_timestamp_minutes > 0">The Leuvenair value was measured {{ sensor_lufdaten_timestamp_minutes }} minutes ago </p>
-    <!--<p>UTC time Irceline: {{ sensor_irceline_timestamp }}</p> -->
+    <p v-if="sensor_lufdaten_timestamp_minutes > 0">The Luftdaten value was measured {{ sensor_lufdaten_timestamp_minutes }} minutes ago </p>
+    <p>The Irceline value was measured {{ sensor_irceline_timestamp }} minutes ago</p>
     <cookie-law theme="blood-orange--rounded"></cookie-law>
   </div>
 </template>
@@ -74,6 +79,10 @@
     return (sensordatavalue.value_type == "P1")
   }
 
+  function checkValueNotMinus99(value, index, array) {
+    return value.properties.value > 0
+  }
+
   export default {
     name: 'home',
     created: function () {
@@ -90,6 +99,8 @@
         sensor_irceline_PM25: NaN,
         sensor_irceline_timestamp: null,
         sensor_irceline_PM10: NaN,
+        sensor_irceline_PM25_interpolated: NaN,
+        sensor_irceline_PM10_interpolated: NaN,
         sensor_humidity: null,
         sensors: [
         {'value':{dust_sensor_id: 6561,temp_sensor_id: null },'text':' 6561 - Lentedreef - 3010 Kessel-Lo '},
@@ -206,8 +217,9 @@
       CookieLaw
     },
     methods: {
-
       fetchData: function() {
+
+        console.log('Fetching Data')
         //console.log('Setting the cookie');
         if (this.sensor_id !== null)
           {this.$cookies.set('sensor_id', this.sensor_id)}
@@ -239,15 +251,44 @@
           //console.log(error)
         });
         axios
+        .get('https://geo.irceline.be/ows?service=WFS&version=1.3.0&request=GetFeature&typeName=rio:pm25_hmean&cql_filter=id=985&outputformat=json') //Real-time interpolated value
+        .then(response => {
+          //console.log(response)
+          //console.log(response.data.features[0].properties.value)
+          //var features = response.data.features
+          //var features_with_value = features.filter(checkValueNotMinus99)
+          var features_with_value_sorted = response.data.features.sort(function(a, b){return a.properties.timestamp - b.properties.timestamp})
+          var feature_to_display = features_with_value_sorted[features_with_value_sorted.length - 1]
+          this.sensor_irceline_PM25_interpolated = feature_to_display.properties.value
+
+          var irceline_date_string = feature_to_display.properties.timestamp
+          var irceline_date = new Date(irceline_date_string)
+          var now_for_irceline = new Date()
+          var difference_irceline = now_for_irceline - irceline_date
+          this.sensor_irceline_timestamp = Math.ceil(difference_irceline / 1000 / 60) //convert value in milliseconds to minutes
+          
+        });
+        axios
+        .get('https://geo.irceline.be/ows?service=WFS&version=1.3.0&request=GetFeature&typeName=rio:pm10_hmean&cql_filter=id=985&outputformat=json') //Real-time interpolated value
+        .then(response => {
+          //console.log(response)
+          //console.log(response.data.features[0].properties.value)
+          //var features = response.data.features
+          //var features_with_value = features.filter(checkValueNotMinus99)
+          var features_with_value_sorted = response.data.features.sort(function(a, b){return a.properties.timestamp - b.properties.timestamp})
+          var feature_to_display = features_with_value_sorted[features_with_value_sorted.length - 1]
+          this.sensor_irceline_PM10_interpolated = feature_to_display.properties.value
+        });
+        axios
         .get('https://geo.irceline.be/sos/api/v1/timeseries/100014') //irceline pm25 sensor
         .then(response => {
           if (response.data !== undefined) {
             this.sensor_irceline_PM25 = Number(response.data.lastValue.value)
-            this.sensor_irceline_timestamp = response.data.lastValue.timestamp
+            //this.sensor_irceline_timestamp = response.data.lastValue.timestamp
           }
           else {
             this.sensor_irceline_PM25 = NaN
-            this.sensor_irceline_timestamp = null
+            //this.sensor_irceline_timestamp = null
           }
         });
         axios
