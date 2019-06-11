@@ -207,8 +207,15 @@
             this.graph_endDate = nowDate.getTime()/1000|0
           }
 
+        // if (this.sensor_id !== null)
+        //   {this.$cookies.set('sensor_id', this.sensor_id)}
+
+
         if (this.sensor_id !== null)
-          {this.$cookies.set('sensor_id', this.sensor_id)}
+          {this.$cookies.set('sensor_id', { 
+            "SDS011ID": this.sensor_id.SDS011ID,
+            "DHTID": this.sensor_id.DHTID
+          })}
 
         console.log('Fetching data...');
 
