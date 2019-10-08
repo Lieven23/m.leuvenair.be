@@ -282,6 +282,24 @@
     },
      created () {
       
+      var sensor_id_cookie
+      console.log("reading the cookie");
+      if (this.$cookies.isKey('sensor_id'))
+      {
+        sensor_id_cookie = this.$cookies.get('sensor_id')
+      }
+      else
+      { 
+        console.log("using default sensor");
+        sensor_id_cookie = { 
+          "SDS011ID": 12030,
+          "DHTID": 12031
+        }
+      }
+
+      this.sensor_id = sensor_id_cookie
+
+      console.log(this.sensor_id)
 
       console.log("reading the sensor list");
       axios
@@ -298,22 +316,10 @@
         console.log(error)
       })
 
-
-      var sensor_id_cookie
-      console.log("reading the cookie");
-      if (this.$cookies.isKey('sensor_id'))
+      if (this.sensors != undefined)
       {
-        sensor_id_cookie = this.$cookies.get('sensor_id')
+        this.sensor_id = this.sensors.find((element) => element.SDS011ID == this.sensor_id.SDS011ID)
       }
-      else
-      { 
-        sensor_id_cookie = { 
-          "SDS011ID": 12030,
-          "DHTID": 12031
-        }
-      }
-
-      this.sensor_id = this.sensors.find((element) => element.SDS011ID === sensor_id_cookie.SDS011ID)
 
       console.log(this.sensor_id)
 
