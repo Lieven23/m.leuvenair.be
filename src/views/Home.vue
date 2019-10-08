@@ -92,15 +92,6 @@
         </div>
       </div>
     </div>
-    
-
-    <h4 class="ui horizontal divider header">
-        <i class="bar chart icon"></i>
-        History
-      </h4>
-    <iframe v-bind:src="'https://maps.luftdaten.info/grafana/d-solo/000000004/single-sensor-view?orgId=1&panelId=2&var-node=' +      sensor_id.SDS011ID + '&from=\'' + graph_startDate + '\'&to=\'' + graph_endDate + '\''" width="100%" height="auto" frameborder="0"></iframe>
-    <br>
-    <iframe v-bind:src="'https://maps.luftdaten.info/grafana/d-solo/000000004/single-sensor-view?orgId=1&panelId=1&var-node=' +      sensor_id.SDS011ID + '&from=\'' + graph_startDate + '\'&to=\'' + graph_endDate + '\''" width="100%" height="auto" frameborder="0"></iframe>
 
 
     <cookie-law theme="blood-orange--rounded"></cookie-law>
@@ -220,7 +211,7 @@
         console.log('Fetching data...');
 
         axios
-        .get('https://api.luftdaten.info/v1/sensor/' + this.sensor_id.SDS011ID + '/')
+        .get('https://data.sensor.community/airrohr/v1/sensor/' + this.sensor_id.SDS011ID + '/')
         .then(response => {
           if (response.data.length > 0) {
             //console.log(response)
@@ -244,6 +235,7 @@
           this.sensor_lufdaten_timestamp_minutes = null
           console.log(error)
         });
+
         axios
         .get('https://geo.irceline.be/ows?service=WFS&version=1.3.0&request=GetFeature&typeName=rio:pm25_hmean&cql_filter=id=985&outputformat=json') //Real-time interpolated value
         .then(response => {
@@ -266,7 +258,7 @@
           this.sensor_irceline_PM10_interpolated = feature_to_display.properties.value
         });
         axios
-        .get('https://api.luftdaten.info/v1/sensor/' + this.sensor_id.DHTID + '/')
+        .get('https://data.sensor.community/airrohr/v1/sensor/' + this.sensor_id.DHTID + '/')
         .then(response => {
           if (response.data.length > 0) {
             this.sensor_humidity = response.data[0].sensordatavalues.find(checkHumidity).value
@@ -289,33 +281,43 @@
 
     },
      created () {
-      console.log("reading the cookie");
-      if (this.$cookies.isKey('sensor_id'))
-      {
-        this.sensor_id = this.$cookies.get('sensor_id')
-      }
-      else
-      { 
-        this.sensor_id = { 
-          "SDS011ID": 12030,
-          "DHTID": 12031
-        }
-      }
+      
 
       console.log("reading the sensor list");
-
       axios
       .get('https://cors-anywhere.herokuapp.com:443/leuvenair.be/grabmeta.php?active=1')
       .then(response => {
         if (response.data.length > 0) {
+            var old_sensor_id = this.sensor_id
             this.sensors = response.data
+            this.sensor_id = this.sensors.find((element) => element.SDS011ID === old_sensor_id.SDS011ID)
             console.log('sensor list updated')
           }
       })
       .catch((error) => {
         console.log(error)
       })
-       this.fetchData()
+
+
+      var sensor_id_cookie
+      console.log("reading the cookie");
+      if (this.$cookies.isKey('sensor_id'))
+      {
+        sensor_id_cookie = this.$cookies.get('sensor_id')
+      }
+      else
+      { 
+        sensor_id_cookie = { 
+          "SDS011ID": 12030,
+          "DHTID": 12031
+        }
+      }
+
+      this.sensor_id = this.sensors.find((element) => element.SDS011ID === sensor_id_cookie.SDS011ID)
+
+      console.log(this.sensor_id)
+
+      this.fetchData()
      },
     mounted () {
     }
