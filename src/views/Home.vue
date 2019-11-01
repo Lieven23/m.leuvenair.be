@@ -6,10 +6,9 @@
     selection
     search
     v-model="sensor_id"
-    onChange="fetchData" 
     />
     
-    <!-- <option v-for="sensor in sensors" :value="sensor">{{ sensor.SDS011ID }} - {{ sensor.STREET_NAME }} {{ sensor.CITY }}</option> 
+    <!--onChange="fetchData" <option v-for="sensor in sensors" :value="sensor">{{ sensor.SDS011ID }} - {{ sensor.STREET_NAME }} {{ sensor.CITY }}</option> 
     v-on:change="fetchData" 
     v-model="sensor_id"-->
     <h4 class="ui horizontal divider header">
@@ -52,7 +51,7 @@
           {{ median }}
         </div>
         <div class="label">
-          PM2.5 (% Error: {{ Math.round((median - sensor_irceline_PM25_interpolated) / sensor_irceline_PM25_interpolated * 100)}})
+          PM2.5 (Error: {{ Math.round((median - sensor_irceline_PM25_interpolated) / sensor_irceline_PM25_interpolated * 100)}} %)
         </div>
       </div>
     </div>
@@ -98,9 +97,9 @@
     </div>
 
     <h4 class="ui horizontal divider header">
-        <i class="bar chart icon"></i>
-        Comparison with other Leuvenair sensors
-      </h4>
+      <i class="bar chart icon"></i>
+      Comparison with other Leuvenair sensors
+    </h4>
     <div class="ui three statistics">
       <div class="grey statistic">
         <div class="value">
@@ -237,8 +236,17 @@
             "list_of_sensors": list_of_IDS
           }
           let my_body_in_json = JSON.stringify(my_body);
+          const headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
           axios
-          .post('https://wdkops59x2.execute-api.us-east-2.amazonaws.com/default/hello-world-python', my_body_in_json )
+          .post('https://b4wfj1hboi.execute-api.us-east-2.amazonaws.com/production/calculatemedian/',
+            my_body_in_json,
+            { 
+              headers: headers
+            }
+            )
           .then(response => {
             //console.log(response)
             this.sensor_comparison = response.data.position
@@ -246,6 +254,9 @@
             this.lowest_value = response.data.lowest_value
             this.current_value = response.data.current_value
             this.median = response.data.median
+          })
+          .catch((error) => {
+            console.log(error)
           })
         }
       },
